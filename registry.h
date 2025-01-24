@@ -47,4 +47,9 @@ DWORD GetConfigRegistryValue(const WCHAR *config_name, const WCHAR *name, BYTE *
 
 int DeleteConfigRegistryValue(const WCHAR *config_name, const WCHAR *name);
 
+/* OTP registry functions */
+BOOL SetConfigRegistryValueDWORD(const WCHAR *config_name, const WCHAR *name, DWORD value);
+
+DWORD GetConfigRegistryValueDWORD(const WCHAR *config_name, const WCHAR *name, DWORD default_value);
+
 #endif /* ifndef REGISTRY_H */

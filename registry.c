@@ -643,3 +643,40 @@ DeleteConfigRegistryValue(const WCHAR *config_name, const WCHAR *name)
 
     return (status == ERROR_SUCCESS);
 }
+
+/* Set a DWORD value in the config registry */
+BOOL
+SetConfigRegistryValueDWORD(const WCHAR *config_name, const WCHAR *name, DWORD value)
+{
+    HKEY regkey;
+    BOOL result = FALSE;
+
+    if (OpenConfigRegistryKey(config_name, &regkey, TRUE) != ERROR_SUCCESS)
+        return FALSE;
+
+    if (RegSetValueEx(regkey, name, 0, REG_DWORD, (BYTE *)&value, sizeof(value)) == ERROR_SUCCESS)
+        result = TRUE;
+
+    RegCloseKey(regkey);
+    return result;
+}
+
+/* Get a DWORD value from the config registry with default value */
+DWORD
+GetConfigRegistryValueDWORD(const WCHAR *config_name, const WCHAR *name, DWORD default_value)
+{
+    HKEY regkey;
+    DWORD value = default_value;
+    DWORD len = sizeof(value);
+    DWORD type = REG_DWORD;
+
+    if (OpenConfigRegistryKey(config_name, &regkey, FALSE) != ERROR_SUCCESS)
+        return default_value;
+
+    if (RegQueryValueEx(regkey, name, NULL, &type, (BYTE *)&value, &len) != ERROR_SUCCESS
+        || type != REG_DWORD)
+        value = default_value;
+
+    RegCloseKey(regkey);
+    return value;
+}

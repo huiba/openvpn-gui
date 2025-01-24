@@ -413,4 +413,15 @@
 /* Timer IDs */
 #define IDT_STOP_TIMER                  2500 /* Timer used to trigger force termination */
 
+/* OTP Settings Dialog */
+#define ID_DLG_OTP                      600
+#define ID_TXT_OTP_SECRET               601
+#define ID_EDT_OTP_SECRET               602
+#define ID_OTP_SECRET_REVEAL            603
+#define ID_TXT_OTP_ALGO                 604
+#define ID_CMB_OTP_ALGO                 605
+#define ID_TXT_OTP_DIGITS               606
+#define ID_CMB_OTP_DIGITS               607
+#define ID_CHK_OTP_AUTOFILL             608
+
 #endif                                       /* ifndef OPENVPN_GUI_RES_H */

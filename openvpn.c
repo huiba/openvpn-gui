@@ -26,15 +26,17 @@
 #endif
 
 #include <windows.h>
-#include <windowsx.h>
 #include <versionhelpers.h>
+#include <wincrypt.h>
 #include <tchar.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <shlwapi.h>
 #include <process.h>
 #include <richedit.h>
-#include <time.h>
 #include <commctrl.h>
+#include <windowsx.h>
 
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
@@ -61,6 +63,7 @@
 #include "echo.h"
 #include "pkcs11.h"
 #include "service.h"
+#include "otp.h"
 
 #define OPENVPN_SERVICE_PIPE_NAME_OVPN2 L"\\\\.\\pipe\\openvpn\\service"
 #define OPENVPN_SERVICE_PIPE_NAME_OVPN3 L"\\\\.\\pipe\\ovpnagent"
@@ -1491,12 +1494,55 @@ OnPassword(connection_t *c, char *msg)
             param->flags |= (flags & 0x2) ? FLAG_CR_TYPE_CONCAT : FLAG_CR_TYPE_SCRV1;
             param->flags |= (flags & 0x1) ? FLAG_CR_ECHO : 0;
             param->str = strdup(chstr + 5);
+
+            /* Check if OTP auto-fill is enabled */
+            otp_settings_t otp_settings;
+            if (LoadOTPSettings(c->config_name, &otp_settings) && otp_settings.autofill)
+            {
+                WCHAR otp[16];
+                if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+                {
+                    /* If this is a concatenated OTP request, append OTP to password */
+                    if (param->flags & FLAG_CR_TYPE_CONCAT)
+                    {
+                        WCHAR password[USER_PASS_LEN];
+                        if (RecallAuthPass(c->config_name, password))
+                        {
+                            wcscat_s(password, _countof(password), otp);
+                            SaveAuthPass(c->config_name, password);
+                        }
+                    }
+                    /* Otherwise, use OTP as the response */
+                    else
+                    {
+                        param->cr_response = _wcsdup(otp);
+                    }
+                }
+            }
+
             LocalizedDialogBoxParamEx(
                 ID_DLG_AUTH_CHALLENGE, c->hwndStatus, UserAuthDialogFunc, (LPARAM)param);
         }
         else if (o.auth_pass_concat_otp)
         {
             param->flags |= FLAG_CR_ECHO | FLAG_CR_TYPE_CONCAT;
+
+            /* Check if OTP auto-fill is enabled */
+            otp_settings_t otp_settings;
+            if (LoadOTPSettings(c->config_name, &otp_settings) && otp_settings.autofill)
+            {
+                WCHAR otp[16];
+                if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+                {
+                    WCHAR password[USER_PASS_LEN];
+                    if (RecallAuthPass(c->config_name, password))
+                    {
+                        wcscat_s(password, _countof(password), otp);
+                        SaveAuthPass(c->config_name, password);
+                    }
+                }
+            }
+
             LocalizedDialogBoxParamEx(
                 ID_DLG_AUTH_CHALLENGE, c->hwndStatus, UserAuthDialogFunc, (LPARAM)param);
         }

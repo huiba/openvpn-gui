@@ -25,6 +25,7 @@ add_executable(${PROJECT_NAME} WIN32
     as.c
     pkcs11.c
     config_parser.c
+    otp.c
     res/openvpn-gui-res.rc)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
@@ -117,6 +118,7 @@ add_library(${PROJECT_NAME_PLAP} SHARED
     registry.c
     config_parser.c
     service.c
+    otp.c
     plap/ui_glue.c
     plap/stub.c
     plap/plap_common.c
