@@ -276,10 +276,11 @@ parse_assigned_ip(connection_t *c, const char *msg)
     /* Convert the IP address to Unicode */
     if (MultiByteToWideChar(CP_UTF8, 0, sep, -1, c->ipv6, _countof(c->ipv6) - 1) == 0)
     {
-        WriteStatusLog(c,
-                       L"GUI> ",
+        WCHAR errmsg[256];
+        _snwprintf_s(errmsg, _countof(errmsg), _TRUNCATE,
                        L"Failed to extract the assigned ipv6 address (error = %d)",
                        GetLastError());
+        WriteStatusLog(c, L"GUI> ", errmsg, false);
         c->ipv6[0] = L'\0';
     }
 }
@@ -577,23 +578,16 @@ UserAuthDialogFunc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 LPWSTR wstr = Widen(param->str);
                 HWND wnd_challenge = GetDlgItem(hwndDlg, ID_EDT_AUTH_CHALLENGE);
-
                 if (!wstr)
                 {
-                    WriteStatusLog(param->c,
-                                   L"GUI> ",
-                                   L"Error converting challenge string to widechar",
-                                   false);
+                    WriteStatusLog(param->c, L"GUI> ", L"Error converting challenge string to widechar", false);
+                    EndDialog(hwndDlg, LOWORD(wParam));
+                    break;
                 }
-                else
-                {
                     SetDlgItemTextW(hwndDlg, ID_TXT_AUTH_CHALLENGE, wstr);
-                }
-
                 free(wstr);
 
-                /* Set/Remove style ES_PASSWORD by SetWindowLong(GWL_STYLE) does nothing,
-                 * send EM_SETPASSWORDCHAR just works. */
+                /* Set password echo on if needed */
                 if (param->flags & FLAG_CR_ECHO)
                 {
                     SendMessage(wnd_challenge, EM_SETPASSWORDCHAR, 0, 0);
@@ -636,51 +630,63 @@ UserAuthDialogFunc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
                 }
                 SecureZeroMemory(password, sizeof(password));
             }
-            if (param->c->flags & FLAG_DISABLE_SAVE_PASS)
+
+            /* Check if OTP settings exist and enable/disable Generate OTP button */
             {
-                ShowWindow(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), SW_HIDE);
-            }
-            else if (param->c->flags & FLAG_SAVE_AUTH_PASS)
-            {
-                Button_SetCheck(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), BST_CHECKED);
+                otp_settings_t otp_settings;
+                BOOL has_otp = LoadOTPSettings(param->c->config_name, &otp_settings);
+                EnableWindow(GetDlgItem(hwndDlg, ID_BTN_GEN_OTP), has_otp);
+                
+                /* Generate initial OTP if autofill is enabled */
+                if (has_otp && otp_settings.autofill)
+                {
+                    WCHAR otp[16];
+                    if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+                    {
+                        if (param->flags & FLAG_CR_TYPE_CONCAT)
+                        {
+                            /* If in concat mode, set the response field */
+                            SetDlgItemTextW(hwndDlg, ID_EDT_AUTH_CHALLENGE, otp);
+                            OutputDebugStringW(L"OTP: Set initial OTP in response field\n");
+                        }
+                    }
+                }
             }
 
-            SetWindowText(hwndDlg, param->c->config_name);
-            if (param->c->failed_auth_attempts > 0)
-            {
-                SetDlgItemTextW(
-                    hwndDlg, ID_TXT_WARNING, LoadLocalizedString(IDS_NFO_AUTH_PASS_RETRY));
-            }
+            /* Initialize save password checkbox state */
+            Button_SetCheck(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), 
+                          (param->c->flags & FLAG_SAVE_AUTH_PASS) ? BST_CHECKED : BST_UNCHECKED);
 
-            if (param->c->state == resuming)
-            {
-                ForceForegroundWindow(hwndDlg);
-            }
-            else
-            {
-                SetForegroundWindow(hwndDlg);
-            }
-            ResetPasswordReveal(
-                GetDlgItem(hwndDlg, ID_EDT_AUTH_PASS), GetDlgItem(hwndDlg, ID_PASSWORD_REVEAL), 0);
-            break;
-
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_NCLBUTTONDOWN:
-        case WM_NCRBUTTONDOWN:
-            /* user interrupt */
-            AutoCloseCancel(hwndDlg);
             break;
 
         case WM_COMMAND:
             param = (auth_param_t *)GetProp(hwndDlg, cfgProp);
             switch (LOWORD(wParam))
             {
+                case ID_BTN_GEN_OTP:
+                    if (HIWORD(wParam) == BN_CLICKED)
+                    {
+                        otp_settings_t otp_settings;
+                        if (LoadOTPSettings(param->c->config_name, &otp_settings))
+                        {
+                            WCHAR otp[16];
+                            if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+                            {
+                                if (param->flags & FLAG_CR_TYPE_CONCAT)
+                                {
+                                    /* If in concat mode, set the response field */
+                                    SetDlgItemTextW(hwndDlg, ID_EDT_AUTH_CHALLENGE, otp);
+                                    OutputDebugStringW(L"OTP: Set OTP in response field\n");
+                                }
+                            }
+                        }
+                    }
+                    break;
+
                 case ID_EDT_AUTH_PASS:
                     ResetPasswordReveal(GetDlgItem(hwndDlg, ID_EDT_AUTH_PASS),
                                         GetDlgItem(hwndDlg, ID_PASSWORD_REVEAL),
                                         wParam);
-
                 /* fall through */
                 case ID_EDT_AUTH_USER:
                 case ID_EDT_AUTH_CHALLENGE:
@@ -700,17 +706,14 @@ UserAuthDialogFunc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
                     break;
 
                 case ID_CHK_SAVE_PASS:
-                    param->c->flags ^= FLAG_SAVE_AUTH_PASS;
-                    if (param->c->flags & FLAG_SAVE_AUTH_PASS)
+                    if (HIWORD(wParam) == BN_CLICKED)
                     {
-                        Button_SetCheck(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), BST_CHECKED);
+                        param->c->flags ^= FLAG_SAVE_AUTH_PASS;
+                        Button_SetCheck(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), 
+                                      (param->c->flags & FLAG_SAVE_AUTH_PASS) ? BST_CHECKED : BST_UNCHECKED);
+                        if (!(param->c->flags & FLAG_SAVE_AUTH_PASS))
+                            DeleteSavedAuthPass(param->c->config_name);
                     }
-                    else
-                    {
-                        DeleteSavedAuthPass(param->c->config_name);
-                        Button_SetCheck(GetDlgItem(hwndDlg, ID_CHK_SAVE_PASS), BST_UNCHECKED);
-                    }
-                    AutoCloseCancel(hwndDlg); /* user interrupt */
                     break;
 
                 case IDOK:
@@ -772,10 +775,9 @@ UserAuthDialogFunc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 
                 case IDCANCEL:
                     EndDialog(hwndDlg, LOWORD(wParam));
-                    StopOpenVPN(param->c);
                     return TRUE;
 
-                case ID_PASSWORD_REVEAL: /* password reveal symbol clicked */
+                case ID_PASSWORD_REVEAL:
                     ChangePasswordVisibility(GetDlgItem(hwndDlg, ID_EDT_AUTH_PASS),
                                              GetDlgItem(hwndDlg, ID_PASSWORD_REVEAL),
                                              wParam);
@@ -783,37 +785,11 @@ UserAuthDialogFunc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
 
-        case WM_OVPN_STATE: /* state changed -- destroy the dialog */
-            EndDialog(hwndDlg, LOWORD(wParam));
-            return TRUE;
-
-        case WM_CTLCOLORSTATIC:
-            if (GetDlgCtrlID((HWND)lParam) == ID_TXT_WARNING)
-            {
-                autoclose *ac = (autoclose *)GetProp(hwndDlg, L"AutoClose");
-                HBRUSH br = (HBRUSH)DefWindowProc(hwndDlg, msg, wParam, lParam);
-                /* This text id is used for auth failure warning or autoclose message. Use
-                 * appropriate color */
-                COLORREF clr = o.clr_warning;
-                if (ac && ac->txtid == ID_TXT_WARNING)
-                {
-                    clr = ac->txtclr;
-                }
-                SetTextColor((HDC)wParam, clr);
-                return (INT_PTR)br;
-            }
-            break;
-
         case WM_CLOSE:
             EndDialog(hwndDlg, LOWORD(wParam));
-            param = (auth_param_t *)GetProp(hwndDlg, cfgProp);
-            StopOpenVPN(param->c);
             return TRUE;
 
         case WM_NCDESTROY:
-            param = (auth_param_t *)GetProp(hwndDlg, cfgProp);
-            free_auth_param(param);
-            AutoCloseCancel(hwndDlg);
             RemoveProp(hwndDlg, cfgProp);
             break;
     }
@@ -1475,25 +1451,36 @@ OnPassword(connection_t *c, char *msg)
         }
         param->c = c;
 
+        /* Check if this is dynamic challenge */
         if (c->dynamic_cr)
         {
-            if (!parse_dynamic_cr(c->dynamic_cr, param))
+            param->flags |= FLAG_CR_TYPE_CRV1;
+            param->flags |= FLAG_PASS_TOKEN;
+            param->str = strdup(c->dynamic_cr);
+            param->id = strdup("Auth");
+            if (!param->str || !param->id)
             {
-                WriteStatusLog(c, L"GUI> ", L"Error parsing dynamic challenge string", FALSE);
-                free_dynamic_cr(c);
+                WriteStatusLog(
+                    c, L"GUI> ", L"Error: Out of memory - ignoring user-auth request", false);
                 free_auth_param(param);
                 return;
             }
             LocalizedDialogBoxParamEx(
                 ID_DLG_CHALLENGE_RESPONSE, c->hwndStatus, GenericPassDialogFunc, (LPARAM)param);
-            free_dynamic_cr(c);
         }
-        else if ((chstr = strstr(msg, "SC:")) && strlen(chstr) > 5)
+        else if ((chstr = strstr(msg, "SC:")) != NULL)
         {
-            ULONG flags = strtoul(chstr + 3, NULL, 10);
-            param->flags |= (flags & 0x2) ? FLAG_CR_TYPE_CONCAT : FLAG_CR_TYPE_SCRV1;
-            param->flags |= (flags & 0x1) ? FLAG_CR_ECHO : 0;
-            param->str = strdup(chstr + 5);
+            param->flags |= FLAG_CR_TYPE_SCRV1;
+            param->flags |= FLAG_PASS_TOKEN;
+            param->str = strdup(chstr + 3);
+            param->id = strdup("Auth");
+            if (!param->str || !param->id)
+            {
+                WriteStatusLog(
+                    c, L"GUI> ", L"Error: Out of memory - ignoring user-auth request", false);
+                free_auth_param(param);
+                return;
+            }
 
             /* Check if OTP auto-fill is enabled */
             otp_settings_t otp_settings;
@@ -1516,6 +1503,7 @@ OnPassword(connection_t *c, char *msg)
                     else
                     {
                         param->cr_response = _wcsdup(otp);
+                        SetDlgItemTextW(c->hwndStatus, ID_EDT_AUTH_CHALLENGE, otp);
                     }
                 }
             }
@@ -1534,12 +1522,9 @@ OnPassword(connection_t *c, char *msg)
                 WCHAR otp[16];
                 if (GenerateOTP(&otp_settings, otp, _countof(otp)))
                 {
-                    WCHAR password[USER_PASS_LEN];
-                    if (RecallAuthPass(c->config_name, password))
-                    {
-                        wcscat_s(password, _countof(password), otp);
-                        SaveAuthPass(c->config_name, password);
-                    }
+                    /* Set the OTP as the response */
+                    param->cr_response = _wcsdup(otp);
+                    OutputDebugStringW(L"OTP: Generated OTP for response field\n");
                 }
             }
 
@@ -1548,6 +1533,18 @@ OnPassword(connection_t *c, char *msg)
         }
         else
         {
+            /* Check if OTP auto-fill is enabled */
+            otp_settings_t otp_settings;
+            if (LoadOTPSettings(c->config_name, &otp_settings) && otp_settings.autofill)
+            {
+                WCHAR otp[16];
+                if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+                {
+                    param->flags |= FLAG_CR_ECHO;  // Show the OTP
+                    param->cr_response = _wcsdup(otp);
+                }
+            }
+
             LocalizedDialogBoxParamEx(
                 ID_DLG_AUTH, c->hwndStatus, UserAuthDialogFunc, (LPARAM)param);
         }
@@ -1908,7 +1905,6 @@ WriteStatusLog(connection_t *c, const WCHAR *prefix, const WCHAR *line, BOOL fil
         };
         SendMessage(logWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cfm);
     }
-
 
     /* Remove lines from log window if it is getting full */
     if (SendMessage(logWnd, EM_GETLINECOUNT, 0, 0) > MAX_LOG_LINES)
@@ -3486,4 +3482,52 @@ daemon_state_resid(const char *state)
         i++;
     }
     return daemon_states[i] ? IDS_NFO_OVPN_STATE_INITIAL + i : IDS_NFO_OVPN_STATE_UNKNOWN;
+}
+
+void
+ShowAuthDialog(connection_t *c, auth_param_t *param)
+{
+    BOOL ret = FALSE;
+    otp_settings_t otp_settings;
+    WCHAR otp[16] = {0};
+
+    /* Check if OTP autofill is enabled and generate OTP if needed */
+    if (LoadOTPSettings(c->config_name, &otp_settings) && otp_settings.autofill)
+    {
+        if (GenerateOTP(&otp_settings, otp, _countof(otp)))
+        {
+            param->cr_response = _wcsdup(otp);
+            param->flags |= FLAG_CR_ECHO;
+        }
+    }
+
+    /* Show Auth Dialog */
+    if (!param->c)
+    {
+        param->c = c;
+    }
+
+    /* Show Modal Dialog */
+    if (c->state == resuming)
+    {
+        ret = LocalizedDialogBoxParam(ID_DLG_AUTH_CHALLENGE, UserAuthDialogFunc, (LPARAM) param);
+    }
+    else
+    {
+        ret = LocalizedDialogBoxParam(ID_DLG_AUTH, UserAuthDialogFunc, (LPARAM) param);
+    }
+
+    if (ret)
+    {
+        c->flags |= FLAG_SAVE_AUTH_PASS;
+    }
+    else
+    {
+        c->flags &= ~FLAG_SAVE_AUTH_PASS;
+    }
+
+    free(param->str);
+    free(param->id);
+    free(param->user);
+    free(param->cr_response);
 }

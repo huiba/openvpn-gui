@@ -38,7 +38,7 @@ BEGIN
 END
 
 /* Auth Username/Password Dialog */
-ID_DLG_AUTH DIALOGEX 6, 18, 180, 95
+ID_DLG_AUTH DIALOGEX 6, 18, 200, 115
 STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | DS_CENTER | DS_SETFOREGROUND
 EXSTYLE WS_EX_TOPMOST
 FONT 8, "Microsoft Sans Serif"
@@ -50,9 +50,11 @@ BEGIN
     EDITTEXT ID_EDT_AUTH_PASS, 60, 23, 94, 12, ES_PASSWORD | ES_AUTOHSCROLL
     ICON ID_ICO_EYE, ID_PASSWORD_REVEAL, 156, 24, 14, 14, SS_ICON|SS_NOTIFY|SS_REALSIZEIMAGE
     CHECKBOX "Tallenna salasana", ID_CHK_SAVE_PASS, 6, 42, 100, 10
-    PUSHBUTTON "OK", IDOK, 20, 58, 50, 14, BS_DEFPUSHBUTTON | WS_TABSTOP | WS_DISABLED
-    PUSHBUTTON "Peruuta", IDCANCEL, 90, 58, 52, 14
-    LTEXT "", ID_TXT_WARNING, 6, 80, 150, 10
+    PUSHBUTTON "Luo OTP", ID_BTN_GEN_OTP, 6, 58, 60, 14
+    EDITTEXT ID_EDT_OTP_TOKEN, 70, 58, 84, 14, ES_AUTOHSCROLL | ES_READONLY | ES_CENTER
+    PUSHBUTTON "OK", IDOK, 30, 80, 50, 14, BS_DEFPUSHBUTTON | WS_TABSTOP | WS_DISABLED
+    PUSHBUTTON "Peruuta", IDCANCEL, 100, 80, 52, 14
+    LTEXT "", ID_TXT_WARNING, 6, 100, 180, 10
 END
 
 /* Auth Username/Password/Challenge Dialog */
@@ -471,7 +473,7 @@ Lisätietoja saa komennolla openvpn-gui --help"
     IDS_ERR_OPEN_PRIVATE_KEY_FILE "Virhe avattaessa yksityistä avaintiedostoa (%ls)."
     IDS_ERR_OLD_PWD_INCORRECT "Vanha salasana on virheellinen."
     IDS_ERR_OPEN_WRITE_KEY "Kirjoittaminen yksityiseen avaintiedostoon (%ls) epäonnistui."
-    IDS_ERR_WRITE_NEW_KEY "Uuden yksityisen avaintiedoston (%ls) luonti epäonnistui."
+    IDS_ERR_WRITE_NEW_KEY "Uuden yksityisen avaintiedoston (%ls) luonti epäonnistuivat."
     IDS_NFO_PWD_CHANGED "Salasana vaihdettu."
     IDS_ERR_READ_PKCS12 "PKCS #12 -tiedoston (%ls) lukeminen epäonnistui."
     IDS_ERR_CREATE_PKCS12 "PKCS #12 -tiedoston luonti ja salasanan vaihto epäonnistuivat."

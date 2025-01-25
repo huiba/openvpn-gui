@@ -550,14 +550,21 @@ OpenConfigRegistryKey(const WCHAR *config_name, HKEY *regkey, BOOL create)
     const WCHAR fmt[] = L"SOFTWARE\\OpenVPN-GUI\\configs\\%ls";
     int count = (wcslen(config_name) + wcslen(fmt) + 1);
     WCHAR *name = malloc(count * sizeof(WCHAR));
+    WCHAR debug_buf[512];
 
     if (!name)
     {
+        OutputDebugStringW(L"OpenConfigRegistryKey: Failed to allocate memory\n");
         return 0;
     }
 
     _snwprintf(name, count, fmt, config_name);
     name[count - 1] = L'\0';
+
+    swprintf_s(debug_buf, _countof(debug_buf), 
+               L"OpenConfigRegistryKey: Attempting to %ls registry key '%ls'\n",
+               create ? L"create" : L"open", name);
+    OutputDebugStringW(debug_buf);
 
     if (!create)
     {
@@ -576,8 +583,23 @@ OpenConfigRegistryKey(const WCHAR *config_name, HKEY *regkey, BOOL create)
                                 regkey,
                                 NULL);
     }
-    free(name);
 
+    if (status != ERROR_SUCCESS)
+    {
+        swprintf_s(debug_buf, _countof(debug_buf),
+                  L"OpenConfigRegistryKey: Failed to %ls registry key '%ls' - Error code: %lu\n",
+                  create ? L"create" : L"open", name, status);
+        OutputDebugStringW(debug_buf);
+    }
+    else
+    {
+        swprintf_s(debug_buf, _countof(debug_buf),
+                  L"OpenConfigRegistryKey: Successfully %ls registry key '%ls'\n",
+                  create ? L"created" : L"opened", name);
+        OutputDebugStringW(debug_buf);
+    }
+
+    free(name);
     return (status == ERROR_SUCCESS);
 }
 
@@ -589,14 +611,39 @@ SetConfigRegistryValueBinary(const WCHAR *config_name,
 {
     HKEY regkey;
     DWORD status;
+    WCHAR debug_buf[512];
+
+    if (!config_name || !name || !data)
+    {
+        OutputDebugStringW(L"SetConfigRegistryValueBinary: NULL parameters\n");
+        return 0;
+    }
+
+    swprintf_s(debug_buf, _countof(debug_buf),
+              L"SetConfigRegistryValueBinary: Attempting to save %lu bytes for key '%ls' in config '%ls'\n",
+              len, name, config_name);
+    OutputDebugStringW(debug_buf);
 
     if (!OpenConfigRegistryKey(config_name, &regkey, TRUE))
     {
+        OutputDebugStringW(L"SetConfigRegistryValueBinary: Failed to open/create registry key\n");
         return 0;
     }
-    status = RegSetValueEx(regkey, name, 0, REG_BINARY, data, len);
-    RegCloseKey(regkey);
 
+    status = RegSetValueEx(regkey, name, 0, REG_BINARY, data, len);
+    if (status != ERROR_SUCCESS)
+    {
+        swprintf_s(debug_buf, _countof(debug_buf),
+                  L"SetConfigRegistryValueBinary: RegSetValueEx failed - Error code: %lu\n",
+                  status);
+        OutputDebugStringW(debug_buf);
+    }
+    else
+    {
+        OutputDebugStringW(L"SetConfigRegistryValueBinary: Value saved successfully\n");
+    }
+
+    RegCloseKey(regkey);
     return (status == ERROR_SUCCESS);
 }
 
@@ -649,16 +696,36 @@ BOOL
 SetConfigRegistryValueDWORD(const WCHAR *config_name, const WCHAR *name, DWORD value)
 {
     HKEY regkey;
-    BOOL result = FALSE;
+    DWORD status;
+    WCHAR debug_buf[512];
 
-    if (OpenConfigRegistryKey(config_name, &regkey, TRUE) != ERROR_SUCCESS)
+    swprintf_s(debug_buf, _countof(debug_buf),
+              L"SetConfigRegistryValueDWORD: Attempting to save value %lu for key '%ls' in config '%ls'\n",
+              value, name, config_name);
+    OutputDebugStringW(debug_buf);
+
+    if (!OpenConfigRegistryKey(config_name, &regkey, TRUE))
+    {
+        OutputDebugStringW(L"SetConfigRegistryValueDWORD: Failed to open/create registry key\n");
+        SetLastError(ERROR_OPEN_FAILED);
         return FALSE;
+    }
 
-    if (RegSetValueEx(regkey, name, 0, REG_DWORD, (BYTE *)&value, sizeof(value)) == ERROR_SUCCESS)
-        result = TRUE;
-
+    status = RegSetValueEx(regkey, name, 0, REG_DWORD, (BYTE *)&value, sizeof(value));
     RegCloseKey(regkey);
-    return result;
+
+    if (status != ERROR_SUCCESS)
+    {
+        swprintf_s(debug_buf, _countof(debug_buf),
+                  L"SetConfigRegistryValueDWORD: RegSetValueEx failed - Error code: %lu\n",
+                  status);
+        OutputDebugStringW(debug_buf);
+        SetLastError(status);
+        return FALSE;
+    }
+
+    OutputDebugStringW(L"SetConfigRegistryValueDWORD: Value saved successfully\n");
+    return TRUE;
 }
 
 /* Get a DWORD value from the config registry with default value */

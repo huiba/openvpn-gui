@@ -65,7 +65,6 @@ ID_ICO_EYESTROKE     ICON  DISCARDABLE  "eye-stroke.ico"
 #include "openvpn-gui-res-ru.rc"
 #include "openvpn-gui-res-se.rc"
 #include "openvpn-gui-res-tr.rc"
-#include "openvpn-gui-res-ua.rc"
 #include "openvpn-gui-res-zh-hans.rc"
 #include "openvpn-gui-res-zh-hant.rc"
 
@@ -96,7 +95,6 @@ BEGIN
             , LANG_RUSSIAN,     1200
             , LANG_SWEDISH,     1200
             , LANG_TURKISH,     1200
-            , LANG_UKRAINIAN,   1200
             , LANG_CHINESE,     1200
             , LANG_KOREAN,      1200
     END

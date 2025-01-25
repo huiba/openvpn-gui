@@ -102,6 +102,44 @@ may be optionally included. Example::
 Starting version 11.34, any connections active when OpenVPN GUI exits or the user
 logs out are automatically reconnected when OpenVPN GUI is restarted.
 
+OTP (One-Time Password) Support
+******************************
+
+Starting with this version, OpenVPN GUI includes support for Time-based One-Time Password (TOTP) authentication.
+This feature allows users to generate TOTP codes directly within the GUI for enhanced security.
+
+Configuring OTP Settings
+-----------------------
+
+OTP settings can be configured through the OpenVPN GUI settings dialog:
+
+1. Right-click the OpenVPN GUI tray icon and select "Settings"
+2. Navigate to the "OTP Settings" tab
+3. Enter your OTP secret key
+4. Select the algorithm (default: SHA1)
+5. Set the number of digits (default: 6)
+6. Optionally enable "Auto-fill OTP" to automatically generate and fill OTP codes
+
+The OTP settings are stored globally and can be used across all configurations.
+
+Using OTP Authentication
+-----------------------
+
+There are two ways to use OTP authentication:
+
+1. Manual Generation:
+   * When connecting to a VPN that requires OTP, click the "Generate OTP" button in the authentication dialog
+   * The generated OTP code will appear in the response field
+   * Click "OK" to connect
+
+2. Auto-fill (if enabled):
+   * When "Auto-fill OTP" is enabled in OTP settings, the GUI will automatically:
+     - Generate a fresh OTP code
+     - Fill it in the response field
+     - Enable "Prompt for OTP and combine with password" in general settings
+
+Note: OTP settings are stored securely in the Windows Registry under HKEY_CURRENT_USER\\SOFTWARE\\OpenVPN-GUI.
+
 To get help with OpenVPN GUI please use one of the official `OpenVPN support
 channels <https://community.openvpn.net/openvpn/wiki/GettingHelp>`_.
 

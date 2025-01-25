@@ -68,7 +68,6 @@ IDB_TILE_IMAGE       BITMAP DISCARDABLE "../res/tileimage.bmp"
 #include "../res/openvpn-gui-res-ru.rc"
 #include "../res/openvpn-gui-res-se.rc"
 #include "../res/openvpn-gui-res-tr.rc"
-#include "../res/openvpn-gui-res-ua.rc"
 #include "../res/openvpn-gui-res-zh-hans.rc"
 #include "../res/openvpn-gui-res-zh-hant.rc"
 

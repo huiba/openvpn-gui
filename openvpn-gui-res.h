@@ -423,5 +423,9 @@
 #define ID_TXT_OTP_DIGITS               606
 #define ID_CMB_OTP_DIGITS               607
 #define ID_CHK_OTP_AUTOFILL             608
+#define ID_BTN_TEST_OTP                 609
+#define ID_TXT_TEST_OTP                 610
+#define ID_BTN_GEN_OTP                  611
+#define ID_EDT_OTP_TOKEN                612
 
 #endif                                       /* ifndef OPENVPN_GUI_RES_H */

@@ -20,6 +20,6 @@ typedef struct {
 INT_PTR CALLBACK OTPSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL SaveOTPSettings(const WCHAR *config_name, const otp_settings_t *settings);
 BOOL LoadOTPSettings(const WCHAR *config_name, otp_settings_t *settings);
-BOOL GenerateOTP(const otp_settings_t *settings, WCHAR *otp, size_t otp_size);
+BOOL GenerateOTP(otp_settings_t *settings, WCHAR *otp, size_t otp_size);
 
 #endif /* OTP_H */ 
