@@ -1,4 +1,4 @@
-OpenVPN GUI
+OpenVPN GUI with TOTP 
 #####################################################
 .. image:: https://travis-ci.org/OpenVPN/openvpn-gui.svg?branch=master
   :target: https://travis-ci.org/OpenVPN/openvpn-gui
@@ -6,6 +6,11 @@ OpenVPN GUI
 .. image:: https://ci.appveyor.com/api/projects/status/github/OpenVPN/openvpn-gui?branch=master&svg=true
   :target: https://ci.appveyor.com/project/mattock/openvpn-gui
   :alt: AppVeyor status
+
+The modified OpenVPN GUI is a Windows GUI for OpenVPN with built-in Time-based One-Time Password (TOTP) support.
+This enhanced version allows users to generate TOTP codes directly within the GUI, eliminating the need
+for separate authenticator apps. With the saved password function, it can automate the vpn login. For now, it only supports a single OTP secret key. The secret key is stored in the registry.
+Use at your own risk.
 
 Installation Instructions for OpenVPN GUI for Windows
 #####################################################
