@@ -1,4 +1,4 @@
-OpenVPN GUI with TOTP 
+OpenVPN GUI with TOTP Support
 #####################################################
 .. image:: https://travis-ci.org/OpenVPN/openvpn-gui.svg?branch=master
   :target: https://travis-ci.org/OpenVPN/openvpn-gui
@@ -7,10 +7,46 @@ OpenVPN GUI with TOTP
   :target: https://ci.appveyor.com/project/mattock/openvpn-gui
   :alt: AppVeyor status
 
-The modified OpenVPN GUI is a Windows GUI for OpenVPN with built-in Time-based One-Time Password (TOTP) support.
+This is a modified version of OpenVPN GUI that adds built-in Time-based One-Time Password (TOTP) support.
+For the original OpenVPN GUI documentation, please visit `OpenVPN GUI README <https://github.com/OpenVPN/openvpn-gui/blob/master/README.rst>`_.
+
+New Features
+#####################################################
+
+Time-based One-Time Password (TOTP) Support
+**************************************************
+
 This enhanced version allows users to generate TOTP codes directly within the GUI, eliminating the need
-for separate authenticator apps. With the saved password function, it can automate the vpn login. For now, it only supports a single OTP secret key. The secret key is stored in the registry.
-Use at your own risk.
+for separate authenticator apps. Key features include:
+
+* Built-in TOTP generator in the authentication dialog
+* Global OTP settings accessible through the Settings menu
+* Automatic OTP code generation and filling
+* Secure storage of OTP settings in the Windows Registry
+
+Limitations
+**************************************************
+
+* Currently supports only a single OTP secret key
+* OTP settings are stored in the registry under HKEY_CURRENT_USER\\SOFTWARE\\OpenVPN-GUI
+* Use at your own risk
+
+Using TOTP Authentication
+**************************************************
+
+1. Configure OTP Settings:
+   * Right-click the OpenVPN GUI tray icon and select "Settings"
+   * Navigate to the "OTP Settings" tab
+   * Enter your OTP secret key
+   * Select the algorithm (default: SHA1)
+   * Set the number of digits (default: 6)
+   * Optionally enable "Auto-fill OTP" for automatic code generation
+
+2. Connect with OTP:
+   * Manual Mode: Click "Generate OTP" in the authentication dialog
+   * Auto-fill Mode: OTP code will be automatically generated and filled in the response field
+
+For all other OpenVPN GUI features and settings, please refer to the `original documentation <https://github.com/OpenVPN/openvpn-gui/blob/master/README.rst>`_.
 
 Installation Instructions for OpenVPN GUI for Windows
 #####################################################
